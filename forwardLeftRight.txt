@@ -1,0 +1,137 @@
+// Motor A
+const int EnableA = 27;
+const int motorIn1 = 14;
+const int motorIn2 = 12;
+
+// Motor B
+const int EnableB = 4;
+const int motorIn3 = 26;
+const int motorIn4 = 25;
+
+// Encoder
+const int EncoderA = 32; 
+const int EncoderB = 34;
+
+volatile long encoderCountA = 0;
+volatile long encoderCountB = 0;
+
+// Motors Pulses values
+const int motorSpeed = 150; // PWM speed (0-255)
+const int targetForwardCount = 90; // Pulses to move one cell (18 cm)
+const int targetTurnCount = 90;    // Pulses for a 90-degree turn
+
+// Interrupt service routines for encoders
+void IRAM_ATTR handleEncoderA() {
+  encoderCountA++;
+}
+
+void IRAM_ATTR handleEncoderB() {
+  encoderCountB++;
+}
+
+void setup() {
+  // Initialize serial communication
+  Serial.begin(115200);
+
+  // Set motor pins as outputs
+  pinMode(EnableA, OUTPUT);
+  pinMode(motorIn1, OUTPUT);
+  pinMode(motorIn2, OUTPUT);
+  pinMode(EnableB, OUTPUT);
+  pinMode(motorIn3, OUTPUT);
+  pinMode(motorIn4, OUTPUT);
+
+  // Set encoder pins as inputs
+  pinMode(EncoderA, INPUT_PULLUP);
+  pinMode(EncoderB, INPUT_PULLUP);
+
+  // Attach interrupts for encoders
+  attachInterrupt(digitalPinToInterrupt(EncoderA), handleEncoderA, RISING);
+  attachInterrupt(digitalPinToInterrupt(EncoderB), handleEncoderB, RISING);
+}
+
+void moveForward() {
+  encoderCountA = 0;
+  encoderCountB = 0;
+
+  analogWrite(EnableA, motorSpeed);
+  analogWrite(EnableB, motorSpeed);
+  digitalWrite(motorIn1, HIGH);
+  digitalWrite(motorIn2, LOW);
+  digitalWrite(motorIn3, HIGH);
+  digitalWrite(motorIn4, LOW);
+
+  while (encoderCountA < targetForwardCount && encoderCountB < targetForwardCount);
+
+  analogWrite(EnableA, 0);
+  analogWrite(EnableB, 0);
+
+
+  delay(1000); // Wait for 1 second
+}
+
+void turnLeft() {
+  encoderCountA = 0;
+  encoderCountB = 0;
+
+  analogWrite(EnableA, motorSpeed);
+  analogWrite(EnableB, motorSpeed);
+  digitalWrite(motorIn1, HIGH);
+  digitalWrite(motorIn2, LOW);
+  digitalWrite(motorIn3, LOW);
+  digitalWrite(motorIn4, LOW);
+
+  while (encoderCountA < targetTurnCount);
+
+  analogWrite(EnableA, 0);
+  analogWrite(EnableB, 0);
+
+
+  delay(1000); // Wait for 1 second
+}
+
+void turnRight() {
+  encoderCountA = 0;
+  encoderCountB = 0;
+
+  analogWrite(EnableA, motorSpeed);
+  analogWrite(EnableB, motorSpeed);
+  digitalWrite(motorIn1, LOW);
+  digitalWrite(motorIn2, LOW);
+  digitalWrite(motorIn3, HIGH);
+  digitalWrite(motorIn4, LOW);
+
+  while (encoderCountB < targetTurnCount);
+
+  analogWrite(EnableA, 0);
+  analogWrite(EnableB, 0);
+
+
+  delay(1000); // Wait for 1 second
+}
+
+void loop() {
+  // Move 3 cells forward
+  for (int i = 0; i < 3; i++) {
+    moveForward();
+  }
+
+  // Turn right
+  turnRight();
+
+  // Move 2 cells forward
+  for (int i = 0; i < 2; i++) {
+    moveForward();
+  }
+
+  // Turn left
+  turnLeft();
+
+  // Move 3 cells forward
+  for (int i = 0; i < 3; i++) {
+    moveForward();
+  }
+
+  // Stop loop after completing the sequence
+  while (true);
+}
